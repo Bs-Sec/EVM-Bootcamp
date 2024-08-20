@@ -1,2 +1,2 @@
-# EVM-Bootcamp
-HW, Notes, etc.
+# Info
+Encode Club EVM Bootcamp Q3
