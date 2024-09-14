@@ -26,7 +26,7 @@ var checkProposal = (proposal: string, proposalItems: string[]) => {
   }
 };
 
-const readProposals = async (pushToArray: any, contract: Function) => {
+const readProposals = async (pushToArray: any, contract: any) => {
   console.log("\nProposals to vote on:");
 
   for (let i = 0; ; i++) {
@@ -89,40 +89,53 @@ async function main() {
     output: process.stdout,
   });
 
-  input.question("Enter your wallet address: \n", async (address: string) => {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+  const question = (question: string) => {
+    return new Promise((resolve, reject) => {
+      input.question(question, (answer) => {
+        resolve(answer);
+      });
+    });
+  };
+
+  const walletAddr = await question("Enter your wallet address");
+
+  const checkWalletAddr = async (wallet: string) => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
       console.error("Invalid wallet address");
       input.close();
+      return false;
     } else {
       console.log("\nChecking if you are able to vote on a proposal...");
 
-      let voterStruct: any = await contract.read.voters([address]);
+      let voterStruct: any = await contract.read.voters([wallet]);
       let answer = checkVote(voterStruct);
       if (answer == false) {
         input.close();
+        return false;
       } else {
-        await readProposals(proposalArray, contract.read.proposals());
-
-        input.question(
-          `Please enter the proposal you'd like to vote for:\n`,
-          async (proposalName: string) => {
-            const output = checkProposal(
-              proposalName,
-              await contract.write.vote()
-            );
-            const txHash = await contract.write.vote([BigInt(`${output}`)]);
-            const receipt = await ethscanClient.waitForTransactionReceipt({
-              hash: txHash,
-            });
-            console.log(
-              `\nStatus: \x1B[92;4m${receipt.status}\x1B[m\nTransaction Hash: ${receipt.transactionHash}`
-            );
-            input.close();
-          }
-        );
+        readProposals(proposalArray, contract.read.proposals());
+        return true;
       }
     }
-  });
+  };
+
+  const resolvedWallet: any = checkWalletAddr(walletAddr as string);
+
+  if(resolvedWallet == true)
+  // input.question(
+  //   `Please enter the proposal you'd like to vote for:\n`,
+  //   async (proposalName: string) => {
+  //     const output = checkProposal(proposalName, await contract.write.vote());
+  //     const txHash = await contract.write.vote([BigInt(`${output}`)]);
+  //     const receipt = await ethscanClient.waitForTransactionReceipt({
+  //       hash: txHash,
+  //     });
+  //     console.log(
+  //       `\nStatus: \x1B[92;4m${receipt.status}\x1B[m\nTransaction Hash: ${receipt.transactionHash}`
+  //     );
+  //     input.close();
+  //   }
+  // );
 }
 
 main().catch((error) => {
